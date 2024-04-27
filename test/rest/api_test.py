@@ -7,7 +7,7 @@ import pytest
 
 BASE_URL = "http://localhost:5000"
 BASE_URL_MOCK = "http://localhost:9090"
-DEFAULT_TIMEOUT = 8  # in secs
+DEFAULT_TIMEOUT = 1  # in secs
 
 @pytest.mark.api
 class TestApi(unittest.TestCase):
