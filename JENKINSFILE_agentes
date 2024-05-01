@@ -19,7 +19,7 @@ pipeline {
 				echo 'Hello world'
 				sh '''
 					hostname
-					uname -agent
+					uname -a
 					whoami
 				'''
 			}
@@ -31,7 +31,7 @@ pipeline {
 				echo 'Hello world'
 				sh '''
 					hostname
-					uname -agent
+					uname -a
 					whoami
 				'''
 			}
