@@ -12,5 +12,29 @@ pipeline {
                 '''
             }
         }
+		stage('LinuxA'){
+			
+			agent{label 'linux'}
+			steps{
+				echo 'Hello world'
+				sh '''
+					hostname
+					uname -agent
+					whoami
+				'''
+			}
+		}
+		stage('LinuxB'){
+			
+			agent{label 'linux'}
+			steps{
+				echo 'Hello world'
+				sh '''
+					hostname
+					uname -agent
+					whoami
+				'''
+			}
+		}
     }
 }
