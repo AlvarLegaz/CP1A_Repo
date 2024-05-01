@@ -1,0 +1,16 @@
+pipeline {
+    agent none
+    
+    stages {
+        stage('Windows'){
+            
+            agent any
+            steps{
+                bat '''
+                hostname
+                whoami
+                '''
+            }
+        }
+    }
+}
