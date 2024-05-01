@@ -2,39 +2,67 @@ pipeline {
     agent none
     
     stages {
-        stage('Windows'){
+        stage('Get Code'){
             
-            agent any
+            agent {label 'agent3'}
             steps{
                 bat '''
                 hostname
                 whoami
                 '''
+                git 'https://github.com/AlvarLegaz/CP1A_Repo.git'
             }
         }
-		stage('LinuxA'){
+        stage ('Build'){
+           agent {label 'agent3'}
+            steps{
+                echo 'Eyy, esto es Python. No hay que compilar nada!!!'
+                echo WORKSPACE
+                bat 'dir'
+                stash includes: "**/*", name:"stash_repo"
+            } 
+        }
+		stage('Test'){
+		    parallel{
+    			stage('Unit') {
+        			agent{label 'raspberry'}
+        			steps{
+        				sh '''
+        					hostname
+        					uname -a
+        					whoami
+        				'''
+        				unstash "stash_repo"
+        				catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE'){
+                            sh '''
+                                export PYTHONPATH=.
+                                pytest --junitxml=result-unit.xml test/unit
+                            '''
+                            stash includes: "result-unit.xml", name:"stash_result-unit"
+                        }
+        			}
+    			}
+    			stage('LinuxB'){
 			
-			agent{label 'linux'}
-			steps{
-				echo 'Hello world'
-				sh '''
-					hostname
-					uname -a
-					whoami
-				'''
-			}
-		}
-		stage('LinuxB'){
-			
-			agent{label 'linux'}
-			steps{
-				echo 'Hello world'
-				sh '''
-					hostname
-					uname -a
-					whoami
-				'''
-			}
-		}
+			        agent{label 'kali'}
+        			steps{
+        				echo 'Hello world'
+        				sh '''
+        					hostname
+        					uname -a
+        					whoami
+        				'''
+        			}
+		        }
+		    }//end of parallel
+		}// end of test
+		 stage('Results'){
+		    agent{label 'agent3'}
+            steps {
+                unstash 'stash_result-unit'
+                junit 'result*.xml'
+                echo 'FINISH!!!'
+            }
+        }
     }
 }
