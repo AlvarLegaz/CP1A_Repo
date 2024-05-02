@@ -24,6 +24,7 @@ pipeline {
         }
 		stage('Test'){
 		    parallel{
+		        
     			stage('Unit') {
         			agent{label 'raspberry'}
         			steps{
@@ -42,26 +43,45 @@ pipeline {
                         }
         			}
     			}
-    			stage('LinuxB'){
-			
+    			stage('Rest'){
 			        agent{label 'kali'}
-        			steps{
-        				echo 'Hello world'
-        				sh '''
+        			steps {
+        			    sh '''
         					hostname
         					uname -a
         					whoami
+        					pwd
         				'''
+        				unstash "stash_repo"
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE'){
+                            sh '''
+                                export FLASK_APP=app/api.py
+                                
+                                java -jar /home/kali/Curso_DevOps/agent2/wiremock-standalone-3.5.4.jar  --port 9090 --root-dir test/wiremock &
+                                flask run &
+                                
+                                sleep 1
+                                
+                                pytest --junitxml=result-rest.xml test/rest
+                            '''
+                            stash includes: "result-rest.xml", name:"stash_result-rest"
+                        }
         			}
 		        }
 		    }//end of parallel
 		}// end of test
-		 stage('Results'){
-		    agent{label 'agent3'}
+	stage('Results'){
+	    agent{label 'agent3'}
             steps {
-                unstash 'stash_result-unit'
-                junit 'result*.xml'
-                echo 'FINISH!!!'
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE'){
+                    
+                    unstash 'stash_result-unit'
+                    unstash 'stash_result-rest'
+                    
+                    junit 'result*.xml'
+                    
+                    echo 'FINISH!!!'
+                }
             }
         }
     }
