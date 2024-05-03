@@ -39,6 +39,8 @@ pipeline {
                                 start flask run
                                 start java -jar C:\\Users\\ALegaz\\Desktop\\CP1A_Repo_working\\Wiremock\\wiremock-standalone-3.5.3.jar --port 9090 --root-dir test\\wiremock
                                 
+                                powershell Start-Sleep -m 1000
+                                
                                 set PYTHONPATH=%WORKSPACE%
                                 pytest --junitxml=result-rest.xml test/rest
                             '''
