@@ -9,25 +9,28 @@ pipeline {
             }
         }
         
-        stage('Static'){
+        stage('Deploy services'){
             steps{
                 bat '''
-                    flake8 --exit-zero --format=pylint --max-line-length 80 app > flake8.out
+                    set FLASK_APP=app\\api.py
+                    start flask run
+                    start java -jar C:\\Users\\ALegaz\\Desktop\\CP1A_Repo_working\\Wiremock\\wiremock-standalone-3.5.3.jar --port 9090 --root-dir test\\wiremock
+                                
+                    powershell Start-Sleep -m 1000
                 '''
-                recordIssues tools: [flake8(name: 'Flake8', pattern: 'flake8.out')], qualityGates: [[threshold: 8, type: 'TOTAL', unstable: true], [threshold: 11, type: 'TOTAL', unstable: false]]
-            }
-        }
-        
-        stage('Build') {
-            steps{
-                echo 'Eyy, esto es Python. No hay que compilar nada!!!'
-                echo WORKSPACE
-                bat 'dir'
             }
         }
         
         stage('Tests'){
             parallel{
+                stage('Static'){
+                    steps{
+                        bat '''
+                            flake8 --exit-zero --format=pylint --max-line-length 80 app > flake8.out
+                        '''
+                        recordIssues tools: [flake8(name: 'Flake8', pattern: 'flake8.out')], qualityGates: [[threshold: 8, type: 'TOTAL', unstable: true], [threshold: 10, type: 'TOTAL', unstable: false]]
+                    }
+                }   
                 
                 stage('Unit + Coverage') {
                     steps {
@@ -38,6 +41,11 @@ pipeline {
                                 coverage xml
                                 '''
                         }
+                        
+                        junit 'result*.xml'
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE'){
+                            cobertura coberturaReportFile: 'coverage.xml', onlyStable: false, failUnstable: false, conditionalCoverageTargets: '100,80,90', lineCoverageTargets: '100,85,95'
+                        }
                     }
                 }
                 
@@ -46,23 +54,20 @@ pipeline {
                         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE'){
                             bat '''
                                 set FLASK_APP=app\\api.py
-                                start flask run
-                                start java -jar C:\\Users\\ALegaz\\Desktop\\CP1A_Repo_working\\Wiremock\\wiremock-standalone-3.5.3.jar --port 9090 --root-dir test\\wiremock
-                                
-                                powershell Start-Sleep -m 1000
-                                
                                 set PYTHONPATH=%WORKSPACE%
                                 pytest --junitxml=result-rest.xml test/rest
                             '''
                         }
+                        junit 'result*.xml'
                     }
                 }
+                
                 stage('Security'){
                     steps{
                         bat '''
                             bandit --exit-zero -r . -f custom -o bandit.out --severity-level medium --msg-template "{abspath}:{line}: [{test_id}] {msg}"
                         '''
-                         recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')], qualityGates: [[threshold: 1, type: 'TOTAL', unstable: true], [threshold: 2, type: 'TOTAL', unstable: false]]
+                         recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')], qualityGates: [[threshold: 2, type: 'TOTAL', unstable: true], [threshold: 4, type: 'TOTAL', unstable: false]]
                     }
                 }
                 
@@ -72,16 +77,6 @@ pipeline {
                         perfReport sourceDataFiles: 'flask.jtl'
                     }
                 }
-            }
-        }
-        
-        stage('Results'){
-            steps {
-                junit 'result*.xml'
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE'){
-                    cobertura coberturaReportFile: 'coverage.xml', onlyStable: false, failUnstable: false, conditionalCoverageTargets: '100,80,90', lineCoverageTargets: '100,80,98'
-                }
-                echo 'FINISH!!!'
             }
         }
     }
