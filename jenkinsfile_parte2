@@ -9,7 +9,7 @@ pipeline {
             }
         }
         
-        stage('Deploy services'){
+        stage('Deploy services - staging'){
             steps{
                 bat '''
                     set FLASK_APP=app\\api.py
