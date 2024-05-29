@@ -82,6 +82,43 @@ pipeline {
                         }
                     }
                 }
+                stage('Security'){
+                    agent{label 'kali'}
+                    steps{
+                        sh '''
+                            hostname
+        					uname -a
+        					whoami
+        					'''
+        					
+                        sh '''
+                            bandit --exit-zero -r . -f custom -o bandit.out --severity-level medium --msg-template "{abspath}:{line}: [{test_id}] {msg}"
+                        '''
+                         recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')], qualityGates: [[threshold: 2, type: 'TOTAL', unstable: true], [threshold: 4, type: 'TOTAL', unstable: false]]
+                    }
+                }
+                
+                stage('Performance'){
+                    agent{label 'raspberry'}
+                    steps{
+                        sh '''
+                            hostname
+        					uname -a
+        					whoami
+        					'''
+                        unstash "stash_repo"
+                        sh '''
+                                export FLASK_APP=app/api.py
+                                export PYTHONPATH=.
+                                flask run &
+                                
+                                sleep 1
+                               
+                               /home/alegaz_rbpim4/Curso_DevOps/apache-jmeter-5.6.3/bin/jmeter -n -t test/jmeter/flask.jmx -f -l flask.jtl
+                            '''
+                        perfReport sourceDataFiles: 'flask.jtl'
+                    }
+                }
             }
         }
     }
