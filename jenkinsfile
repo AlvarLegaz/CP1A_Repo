@@ -5,7 +5,10 @@ pipeline {
         stage('Get Code') {
             steps {
                 // Obtener codigo del repo
-                git 'https://github.com/AlvarLegaz/CP1A_Repo.git'
+                script {
+                    def gitBranch = 'feature_fix_coverage'
+                    checkout([$class: 'GitSCM', branches: [[name: "*/${gitBranch}"]], userRemoteConfigs: [[url: 'https://github.com/AlvarLegaz/CP1A_Repo.git']]])
+                }
             }
         }
         stage('Unit + Coverage') {
